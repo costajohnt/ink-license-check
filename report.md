@@ -2,24 +2,23 @@
 
 **Generated:** 2026-04-08
 **Tool:** [ink-license-check](https://github.com/costajohnt/ink-license-check) v1.0.0
-**Methodology:** Candidates discovered via GitHub dependents page (5,221 packages listed), npm registry search, and manual CLI survey. 128 candidates checked, 93 confirmed ink users.
+**Methodology:** Scraped all 200 pages of [GitHub dependents](https://github.com/vadimdemedes/ink/network/dependents?dependent_type=PACKAGE) (5,221 listed packages), batch-checked download counts for 7,955 candidates, verified the 110 with 10k+ monthly downloads against actual npm tarballs.
 
 ## Summary
 
 | Metric | Count |
 |--------|-------|
-| Packages checked | 128 |
-| Confirmed ink users | 93 |
-| **Violations (50k+ downloads/mo)** | **15** |
-| Properly attributed (50k+ downloads/mo) | 7 |
+| GitHub-listed dependents | 5,221 |
+| Candidates download-checked | 7,955 |
+| Verified ink users (10k+ downloads) | 47 |
+| **Violations** | **40** |
+| Properly attributed | 7 |
 
 ## Commercial / Third-Party Violations
 
-The following packages use Ink but do not include the required MIT license attribution:
-
 ### @anthropic-ai/claude-code (42.8M monthly downloads)
 
-- **Detection:** Bundled (ink-specific identifiers found with React indicators)
+- **Detection:** Bundled (ink-specific identifiers with React indicators)
 - **Missing:** Vadym Demedes, Sindre Sorhus
 
 ### @oclif/table (2.4M monthly downloads)
@@ -34,12 +33,27 @@ The following packages use Ink but do not include the required MIT license attri
 
 ### @shopify/cli (1.1M monthly downloads)
 
-- **Detection:** Bundled (ink-specific identifiers found with React indicators)
+- **Detection:** Bundled (ink-specific identifiers with React indicators)
 - **Missing:** Vadym Demedes, Sindre Sorhus
 
 ### @tapjs/reporter (889k monthly downloads)
 
 - **Detection:** Direct dependency (`ink`)
+- **Missing:** Vadym Demedes, Sindre Sorhus
+
+### cdktf-cli (816k monthly downloads)
+
+- **Detection:** Direct dependency (`ink`, `ink-testing-library`)
+- **Missing:** Vadym Demedes, Sindre Sorhus
+
+### cline (609k monthly downloads)
+
+- **Detection:** Direct dependency (`ink`, `ink-picture`, `ink-spinner`, `ink-testing-library`)
+- **Missing:** Vadym Demedes, Sindre Sorhus
+
+### gatsby-recipes (338k monthly downloads)
+
+- **Detection:** Direct dependency (`ink`, `ink-select-input`, `ink-spinner`)
 - **Missing:** Vadym Demedes, Sindre Sorhus
 
 ### @gitlab/duo-cli (144k monthly downloads)
@@ -51,6 +65,21 @@ The following packages use Ink but do not include the required MIT license attri
 
 - **Detection:** Direct dependency (`ink`, `ink-testing-library`)
 - **Missing:** Vadym Demedes
+
+### eslint-remote-tester (45k monthly downloads)
+
+- **Detection:** Direct dependency (`ink`, `ink-testing-library`)
+- **Missing:** Vadym Demedes, Sindre Sorhus
+
+### blitz (27k monthly downloads)
+
+- **Detection:** Direct dependency (`ink`, `ink-spinner`)
+- **Missing:** Vadym Demedes, Sindre Sorhus
+
+### cdktn-cli (23k monthly downloads)
+
+- **Detection:** Direct dependency (`ink`, `ink-select-input`, `ink-table`, `ink-spinner`, `ink-use-stdout-dimensions`)
+- **Missing:** Vadym Demedes, Sindre Sorhus
 
 ### @amplitude/wizard
 
@@ -64,7 +93,7 @@ The following packages use Ink but do not include the required MIT license attri
 
 ### @prisma/cli
 
-- **Detection:** Bundled (ink-specific identifiers found with React indicators)
+- **Detection:** Bundled (ink-specific identifiers with React indicators)
 - **Missing:** Vadym Demedes, Sindre Sorhus
 
 ## Ink Ecosystem Violations
@@ -75,16 +104,28 @@ These ink extension packages depend on ink but don't include the copyright notic
 |---------|-------------|---------|
 | ink-gradient | 2.5M | Vadym Demedes |
 | ink-table | 1.9M | Vadym Demedes, Sindre Sorhus |
+| ink-use-stdout-dimensions | 1.8M | Vadym Demedes, Sindre Sorhus |
 | ink-link | 1.0M | Vadym Demedes |
+| ink-picture | 585k | Vadym Demedes, Sindre Sorhus |
 | ink-big-text | 226k | Vadym Demedes |
+| ink-progress-bar | 118k | Vadym Demedes, Sindre Sorhus |
+| ink-scroll-view | 88k | Vadym Demedes, Sindre Sorhus |
+| element-source | 83k | Vadym Demedes, Sindre Sorhus |
+| ink-scroll-list | 75k | Vadym Demedes, Sindre Sorhus |
+| ink-box | 60k | Vadym Demedes |
 | ink-confirm-input | 56k | Vadym Demedes, Sindre Sorhus |
 | ink-chart | 55k | Vadym Demedes, Sindre Sorhus |
-| ink-checkbox | 27k | Vadym Demedes, Sindre Sorhus |
 | ink-render-string | 27k | Vadym Demedes, Sindre Sorhus |
+| ink-checkbox | 27k | Vadym Demedes, Sindre Sorhus |
 | ink-divider | 27k | Vadym Demedes, Sindre Sorhus |
 | ink-task-list | 25k | Vadym Demedes, Sindre Sorhus |
-| ink-markdown | 20k | Vadym Demedes, Sindre Sorhus |
+| ink-syntax-highlight | 24k | Vadym Demedes, Sindre Sorhus |
 | fullscreen-ink | 21k | Vadym Demedes, Sindre Sorhus |
+| ink-markdown | 20k | Vadym Demedes, Sindre Sorhus |
+| difit | 19k | Vadym Demedes, Sindre Sorhus |
+| ink-scrollbar | 13k | Vadym Demedes, Sindre Sorhus |
+| ccstatusline | 157k | Vadym Demedes, Sindre Sorhus |
+| atmn | 93k | Vadym Demedes, Sindre Sorhus |
 
 ## Properly Attributed
 
