@@ -11,7 +11,7 @@ function run(args, { timeout = 30_000 } = {}) {
   return new Promise((resolve) => {
     execFile('node', [CLI, ...args], { timeout }, (err, stdout, stderr) => {
       resolve({
-        exitCode: err?.code ?? 0,
+        exitCode: err ? (err.killed ? 'KILLED' : (err.code ?? 1)) : 0,
         stdout,
         stderr,
       });

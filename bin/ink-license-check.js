@@ -10,6 +10,7 @@ import { checkAttribution } from '../lib/attribution.js';
 import { formatText, formatJson } from '../lib/format.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8'));
 
 const USAGE = `
 Usage: ink-license-check <package...> [options]
@@ -47,12 +48,10 @@ function parseArgs(argv) {
         process.exit(0);
         break;
       case '-v':
-      case '--version': {
-        const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8'));
+      case '--version':
         console.log(pkg.version);
         process.exit(0);
         break;
-      }
       default:
         if (arg.startsWith('-')) {
           console.error(`Unknown option: ${arg}\n\n${USAGE}`);
@@ -70,6 +69,19 @@ function parseArgs(argv) {
   return { packages, flags };
 }
 
+function errorResult(packageName, status, message) {
+  return {
+    package: packageName,
+    version: null,
+    usesInk: false,
+    inkDetection: null,
+    attribution: null,
+    downloads: null,
+    status,
+    error: message,
+  };
+}
+
 async function checkPackage(packageName, flags) {
   try {
     const meta = await getPackageMetadata(packageName);
@@ -80,7 +92,11 @@ async function checkPackage(packageName, flags) {
 
     let downloads = null;
     if (flags.downloads) {
-      downloads = await getDownloadCount(packageName);
+      try {
+        downloads = await getDownloadCount(packageName);
+      } catch (dlErr) {
+        console.error(`Warning: could not fetch downloads for ${packageName}: ${dlErr.message}`);
+      }
     }
 
     if (!detection.usesInk) {
@@ -120,28 +136,11 @@ async function checkPackage(packageName, flags) {
     };
   } catch (err) {
     if (err instanceof PackageNotFoundError) {
-      return {
-        package: packageName,
-        version: null,
-        usesInk: false,
-        inkDetection: null,
-        attribution: null,
-        downloads: null,
-        status: 'skip',
-        error: `Package not found on npm`,
-      };
+      return errorResult(packageName, 'skip', 'Package not found on npm');
     }
 
-    return {
-      package: packageName,
-      version: null,
-      usesInk: false,
-      inkDetection: null,
-      attribution: null,
-      downloads: null,
-      status: 'skip',
-      error: err.message,
-    };
+    console.error(`Warning: failed to check ${packageName}: ${err.message}`);
+    return errorResult(packageName, 'error', err.message);
   }
 }
 
@@ -149,31 +148,26 @@ async function main() {
   const { packages, flags } = parseArgs(process.argv);
 
   const settled = await Promise.allSettled(
-    packages.map((pkg) => checkPackage(pkg, flags)),
+    packages.map((p) => checkPackage(p, flags)),
   );
 
-  const results = settled.map((s, i) => {
-    if (s.status === 'fulfilled') return s.value;
-    return {
-      package: packages[i],
-      version: null,
-      usesInk: false,
-      inkDetection: null,
-      attribution: null,
-      downloads: null,
-      status: 'skip',
-      error: s.reason?.message || 'Unknown error',
-    };
-  });
+  const results = settled.map((s, i) =>
+    s.status === 'fulfilled' ? s.value : errorResult(packages[i], 'error', s.reason?.message || 'Unknown error'),
+  );
 
+  const opts = { version: pkg.version };
   if (flags.json) {
     console.log(formatJson(results));
   } else {
-    console.log(formatText(results));
+    console.log(formatText(results, opts));
   }
 
   const hasViolations = results.some((r) => r.status === 'fail');
-  process.exit(hasViolations ? 1 : 0);
+  const hasErrors = results.some((r) => r.status === 'error');
+  process.exit(hasViolations ? 1 : hasErrors ? 2 : 0);
 }
 
-main();
+main().catch((err) => {
+  console.error(`Fatal error: ${err.message}`);
+  process.exit(2);
+});
