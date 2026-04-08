@@ -1,0 +1,36 @@
+{
+  "name": "ink-license-check",
+  "version": "1.0.0",
+  "description": "Check npm packages for missing Ink (MIT) license attribution",
+  "type": "module",
+  "bin": {
+    "ink-license-check": "./bin/ink-license-check.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "ink",
+    "license",
+    "mit",
+    "compliance",
+    "attribution",
+    "npm",
+    "check"
+  ],
+  "author": "John Costa",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/costajohnt/ink-license-check.git"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md",
+    "LICENSE"
+  ]
+}
