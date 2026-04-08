@@ -24,10 +24,13 @@ npx ink-license-check <package...>
 ink-license-check <package...> [options]
 
 Options:
-  --json          Output results as JSON
-  -d, --downloads Include monthly npm download counts
-  -h, --help      Show this help message
-  -v, --version   Show version number
+  --json                 Output results as JSON
+  --report               Output a markdown report (for posting on GitHub)
+  -d, --downloads        Include monthly npm download counts
+  --min-downloads <n>    Only report on packages with at least n monthly downloads
+                         (implies --downloads)
+  -h, --help             Show this help message
+  -v, --version          Show version number
 ```
 
 ## Examples
@@ -63,6 +66,12 @@ ink-license-check v1.0.0
 1 violation found in 2 packages
 ```
 
+Generate a markdown report for high-download packages:
+
+```
+$ ink-license-check pkg-a pkg-b pkg-c --report --min-downloads 100000
+```
+
 JSON output for scripting:
 
 ```
@@ -85,7 +94,7 @@ For each package:
 
 - `0` — no violations found
 - `1` — one or more violations found
-- `2` — usage error (no packages provided, unknown flags)
+- `2` — usage error or package check failures (network errors, etc.)
 
 ## License
 

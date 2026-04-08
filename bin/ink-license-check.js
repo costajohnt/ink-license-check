@@ -7,7 +7,7 @@ import { getPackageMetadata, downloadTarball, getDownloadCount, PackageNotFoundE
 import { extractTgz } from '../lib/tar.js';
 import { detectInk } from '../lib/detect.js';
 import { checkAttribution } from '../lib/attribution.js';
-import { formatText, formatJson } from '../lib/format.js';
+import { formatText, formatJson, formatReport } from '../lib/format.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8'));
@@ -18,30 +18,48 @@ Usage: ink-license-check <package...> [options]
 Check npm packages for missing Ink (MIT) license attribution.
 
 Options:
-  --json          Output results as JSON
-  -d, --downloads Include monthly npm download counts
-  -h, --help      Show this help message
-  -v, --version   Show version number
+  --json                 Output results as JSON
+  --report               Output a markdown report (for posting on GitHub)
+  -d, --downloads        Include monthly npm download counts
+  --min-downloads <n>    Only report on packages with at least n monthly downloads
+                         (implies --downloads)
+  -h, --help             Show this help message
+  -v, --version          Show version number
 
 Examples:
   ink-license-check my-cli-tool
   ink-license-check @org/cli another-pkg --json -d
+  ink-license-check pkg-a pkg-b --report --min-downloads 100000
 `.trim();
 
 function parseArgs(argv) {
   const args = argv.slice(2);
   const packages = [];
-  const flags = { json: false, downloads: false };
+  const flags = { json: false, report: false, downloads: false, minDownloads: null };
 
-  for (const arg of args) {
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
     switch (arg) {
       case '--json':
         flags.json = true;
+        break;
+      case '--report':
+        flags.report = true;
         break;
       case '-d':
       case '--downloads':
         flags.downloads = true;
         break;
+      case '--min-downloads': {
+        const val = args[++i];
+        if (!val || Number.isNaN(Number(val))) {
+          console.error(`--min-downloads requires a numeric value\n\n${USAGE}`);
+          process.exit(2);
+        }
+        flags.minDownloads = Number(val);
+        flags.downloads = true;
+        break;
+      }
       case '-h':
       case '--help':
         console.log(USAGE);
@@ -53,11 +71,20 @@ function parseArgs(argv) {
         process.exit(0);
         break;
       default:
-        if (arg.startsWith('-')) {
+        if (arg.startsWith('--min-downloads=')) {
+          const val = arg.split('=')[1];
+          if (Number.isNaN(Number(val))) {
+            console.error(`--min-downloads requires a numeric value\n\n${USAGE}`);
+            process.exit(2);
+          }
+          flags.minDownloads = Number(val);
+          flags.downloads = true;
+        } else if (arg.startsWith('-')) {
           console.error(`Unknown option: ${arg}\n\n${USAGE}`);
           process.exit(2);
+        } else {
+          packages.push(arg);
         }
-        packages.push(arg);
     }
   }
 
@@ -151,13 +178,22 @@ async function main() {
     packages.map((p) => checkPackage(p, flags)),
   );
 
-  const results = settled.map((s, i) =>
+  let results = settled.map((s, i) =>
     s.status === 'fulfilled' ? s.value : errorResult(packages[i], 'error', s.reason?.message || 'Unknown error'),
   );
 
-  const opts = { version: pkg.version };
+  // Apply download threshold filter
+  if (flags.minDownloads != null) {
+    results = results.filter((r) =>
+      r.status === 'error' || r.status === 'skip' || (r.downloads != null && r.downloads >= flags.minDownloads),
+    );
+  }
+
+  const opts = { version: pkg.version, minDownloads: flags.minDownloads };
   if (flags.json) {
     console.log(formatJson(results));
+  } else if (flags.report) {
+    console.log(formatReport(results, opts));
   } else {
     console.log(formatText(results, opts));
   }

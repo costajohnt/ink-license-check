@@ -80,4 +80,41 @@ describe('CLI', () => {
     assert.equal(parsed.results.length, 2);
     assert.equal(parsed.summary.total, 2);
   });
+
+  it('filters by --min-downloads', async () => {
+    // ink has millions of downloads, so a very high threshold should still include it
+    const { stdout } = await run(['ink', '--json', '--min-downloads', '1000'], { timeout: 60_000 });
+    const parsed = JSON.parse(stdout);
+    assert.equal(parsed.results.length, 1);
+    assert.equal(parsed.results[0].package, 'ink');
+    assert.ok(parsed.results[0].downloads >= 1000);
+  });
+
+  it('--min-downloads filters out low-download packages', async () => {
+    // Use a threshold higher than ink's downloads — should return empty results
+    const { stdout } = await run(['ink', '--json', '--min-downloads', '999999999999'], { timeout: 60_000 });
+    const parsed = JSON.parse(stdout);
+    assert.equal(parsed.results.length, 0);
+  });
+
+  it('generates markdown report with --report', async () => {
+    const { exitCode, stdout } = await run(['ink', '--report', '-d'], { timeout: 60_000 });
+    assert.equal(exitCode, 0);
+    assert.ok(stdout.includes('# Ink License Attribution Report'));
+    assert.ok(stdout.includes('## Summary'));
+    assert.ok(stdout.includes('Packages checked'));
+    assert.ok(stdout.includes('ink'));
+  });
+
+  it('--min-downloads=N syntax works', async () => {
+    const { stdout } = await run(['ink', '--json', '--min-downloads=1000'], { timeout: 60_000 });
+    const parsed = JSON.parse(stdout);
+    assert.equal(parsed.results.length, 1);
+  });
+
+  it('--min-downloads without value exits 2', async () => {
+    const { exitCode, stderr } = await run(['ink', '--min-downloads']);
+    assert.equal(exitCode, 2);
+    assert.ok(stderr.includes('requires a numeric value'));
+  });
 });
