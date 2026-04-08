@@ -2,75 +2,102 @@
 
 **Generated:** 2026-04-08
 **Tool:** [ink-license-check](https://github.com/costajohnt/ink-license-check) v1.0.0
-**Threshold:** 50.0k+ monthly downloads
+**Methodology:** Candidates discovered via GitHub dependents page (5,221 packages listed), npm registry search, and manual CLI survey. 128 candidates checked, 93 confirmed ink users.
 
 ## Summary
 
 | Metric | Count |
 |--------|-------|
-| Packages checked | 13 |
-| Uses Ink | 13 |
-| **Violations** | **9** |
-| Properly attributed | 4 |
+| Packages checked | 128 |
+| Confirmed ink users | 93 |
+| **Violations (50k+ downloads/mo)** | **15** |
+| Properly attributed (50k+ downloads/mo) | 7 |
 
-## Violations
+## Commercial / Third-Party Violations
 
 The following packages use Ink but do not include the required MIT license attribution:
 
-### ink-gradient@4.0.0 (2.5M monthly downloads)
+### @anthropic-ai/claude-code (42.8M monthly downloads)
 
-- **Detection:** Direct dependency ("ink" in dependencies; "ink-big-text" in dependencies; "ink-testing-library" in dependencies)
+- **Detection:** Bundled (ink-specific identifiers found with React indicators)
+- **Missing:** Vadym Demedes, Sindre Sorhus
+
+### @oclif/table (2.4M monthly downloads)
+
+- **Detection:** Direct dependency (`ink`, `ink-testing-library`)
+- **Missing:** Vadym Demedes, Sindre Sorhus
+
+### gatsby-cli (1.6M monthly downloads)
+
+- **Detection:** Direct dependency (`ink`, `ink-spinner`)
+- **Missing:** Vadym Demedes, Sindre Sorhus
+
+### @shopify/cli (1.1M monthly downloads)
+
+- **Detection:** Bundled (ink-specific identifiers found with React indicators)
+- **Missing:** Vadym Demedes, Sindre Sorhus
+
+### @tapjs/reporter (889k monthly downloads)
+
+- **Detection:** Direct dependency (`ink`)
+- **Missing:** Vadym Demedes, Sindre Sorhus
+
+### @gitlab/duo-cli (144k monthly downloads)
+
+- **Detection:** Direct dependency (`ink`, `ink-testing-library`)
+- **Missing:** Vadym Demedes, Sindre Sorhus
+
+### treport (103k monthly downloads)
+
+- **Detection:** Direct dependency (`ink`, `ink-testing-library`)
 - **Missing:** Vadym Demedes
 
-### ink-table@3.1.0 (1.9M monthly downloads)
+### @amplitude/wizard
 
-- **Detection:** Direct dependency ("ink" in dependencies; "ink-testing-library" in dependencies)
+- **Detection:** Direct dependency (`@inkjs/ui`, `ink`)
 - **Missing:** Vadym Demedes, Sindre Sorhus
 
-### gatsby-cli@5.16.0 (1.6M monthly downloads)
+### @datadog/ai-setup-cli
 
-- **Detection:** Direct dependency ("ink" in dependencies; "ink-spinner" in dependencies)
+- **Detection:** Direct dependency (`ink`, `ink-testing-library`)
 - **Missing:** Vadym Demedes, Sindre Sorhus
 
-### @shopify/cli@3.93.1 (1.1M monthly downloads)
+### @prisma/cli
 
-- **Detection:** Bundled (2 ink-specific identifiers found with React indicators)
+- **Detection:** Bundled (ink-specific identifiers found with React indicators)
 - **Missing:** Vadym Demedes, Sindre Sorhus
 
-### ink-link@5.0.0 (1.0M monthly downloads)
+## Ink Ecosystem Violations
 
-- **Detection:** Direct dependency ("ink" in dependencies; "ink-testing-library" in dependencies)
-- **Missing:** Vadym Demedes
+These ink extension packages depend on ink but don't include the copyright notice:
 
-### ink-big-text@2.0.0 (225.9k monthly downloads)
-
-- **Detection:** Direct dependency ("ink" in dependencies; "ink-testing-library" in dependencies)
-- **Missing:** Vadym Demedes
-
-### @gitlab/duo-cli@8.83.0 (144.3k monthly downloads)
-
-- **Detection:** Direct dependency ("ink" in dependencies; "ink-testing-library" in dependencies)
-- **Missing:** Vadym Demedes, Sindre Sorhus
-
-### treport@3.0.4 (102.7k monthly downloads)
-
-- **Detection:** Direct dependency ("ink" in dependencies; "ink-testing-library" in dependencies)
-- **Missing:** Vadym Demedes
-
-### ink-confirm-input@2.0.0 (56.0k monthly downloads)
-
-- **Detection:** Direct dependency ("ink-text-input" in dependencies; "ink" in dependencies; "ink-testing-library" in dependencies)
-- **Missing:** Vadym Demedes, Sindre Sorhus
+| Package | Downloads/mo | Missing |
+|---------|-------------|---------|
+| ink-gradient | 2.5M | Vadym Demedes |
+| ink-table | 1.9M | Vadym Demedes, Sindre Sorhus |
+| ink-link | 1.0M | Vadym Demedes |
+| ink-big-text | 226k | Vadym Demedes |
+| ink-confirm-input | 56k | Vadym Demedes, Sindre Sorhus |
+| ink-chart | 55k | Vadym Demedes, Sindre Sorhus |
+| ink-checkbox | 27k | Vadym Demedes, Sindre Sorhus |
+| ink-render-string | 27k | Vadym Demedes, Sindre Sorhus |
+| ink-divider | 27k | Vadym Demedes, Sindre Sorhus |
+| ink-task-list | 25k | Vadym Demedes, Sindre Sorhus |
+| ink-markdown | 20k | Vadym Demedes, Sindre Sorhus |
+| fullscreen-ink | 21k | Vadym Demedes, Sindre Sorhus |
 
 ## Properly Attributed
 
-| Package | Version | Downloads | Attribution In |
-|---------|---------|-----------|----------------|
-| ink-spinner | 5.0.0 | 7.3M | license |
-| ink-text-input | 6.0.0 | 4.4M | license |
-| ink-select-input | 6.2.0 | 3.1M | license |
-| ink-testing-library | 4.0.0 | 1.4M | license |
+| Package | Downloads/mo | Attribution In |
+|---------|-------------|----------------|
+| ink-spinner | 7.3M | LICENSE |
+| ink-text-input | 4.4M | LICENSE |
+| ink-select-input | 3.1M | LICENSE |
+| ink-testing-library | 1.4M | LICENSE |
+| @inkjs/ui | 687k | LICENSE |
+| pastel | 58k | LICENSE |
+| ink-multi-select | 22k | LICENSE |
 
 ---
 
-[Ink](https://github.com/vadimdemedes/ink) is MIT licensed by Vadym Demedes and Sindre Sorhus. The MIT license requires that the copyright notice be included in all copies or substantial portions of the software.
+[Ink](https://github.com/vadimdemedes/ink) is MIT licensed by Vadym Demedes and Sindre Sorhus. The MIT license requires that the copyright notice be included in all copies or substantial portions of the software. This report was generated by [ink-license-check](https://github.com/costajohnt/ink-license-check), a zero-dependency CLI tool that downloads npm tarballs and scans for attribution.
