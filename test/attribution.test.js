@@ -11,13 +11,15 @@ const BOTH = 'Copyright (c) Vadym Demedes\nCopyright (c) Sindre Sorhus';
 
 describe('checkAttribution', () => {
   describe('license file scanning', () => {
-    it('finds Vadym Demedes in LICENSE file but requires Sindre too', () => {
+    it('passes on Vadym alone (the only holder named in Ink <= 6)', () => {
       const result = checkAttribution([
         entry('LICENSE', 'MIT License\n\nCopyright (c) Vadym Demedes'),
       ]);
       assert.equal(result.vadymFound, true);
       assert.equal(result.sindreFound, false);
-      assert.equal(result.hasAttribution, false);
+      assert.equal(result.hasAttribution, true);
+      assert.deepEqual(result.missingCopyrightHolders, []);
+      assert.ok(result.notes.some((n) => n.includes('Sindre')));
       assert.ok(result.foundIn.includes('LICENSE'));
     });
 
@@ -35,7 +37,7 @@ describe('checkAttribution', () => {
       assert.equal(result.vadymFound, true);
     });
 
-    it('passes only when both copyright holders are present', () => {
+    it('passes with both holders present and adds no Sindre note', () => {
       const result = checkAttribution([
         entry('LICENSE', BOTH),
       ]);
@@ -43,17 +45,18 @@ describe('checkAttribution', () => {
       assert.equal(result.sindreFound, true);
       assert.equal(result.hasAttribution, true);
       assert.deepEqual(result.missingCopyrightHolders, []);
+      assert.deepEqual(result.notes, []);
     });
 
-    it('reports missing Sindre Sorhus when only Vadym found (no pass)', () => {
+    it('does NOT fail a package that names only Vadym (e.g. vendored ink@4)', () => {
       const result = checkAttribution([
         entry('LICENSE', 'Copyright (c) Vadym Demedes'),
       ]);
-      assert.equal(result.hasAttribution, false);
-      assert.deepEqual(result.missingCopyrightHolders, ['Sindre Sorhus']);
+      assert.equal(result.hasAttribution, true);
+      assert.deepEqual(result.missingCopyrightHolders, []);
     });
 
-    it('reports missing Vadym when only Sindre found (no pass)', () => {
+    it('fails when the always-present holder Vadym is missing', () => {
       const result = checkAttribution([
         entry('LICENSE', 'Copyright (c) Sindre Sorhus'),
       ]);
@@ -95,7 +98,7 @@ describe('checkAttribution', () => {
         entry('LICENSE', 'MIT License\n\nCopyright (c) Some Company'),
       ]);
       assert.equal(result.hasAttribution, false);
-      assert.deepEqual(result.missingCopyrightHolders, ['Vadym Demedes', 'Sindre Sorhus']);
+      assert.deepEqual(result.missingCopyrightHolders, ['Vadym Demedes']);
     });
 
     it('fails when no license files exist', () => {
