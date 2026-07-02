@@ -192,6 +192,25 @@ describe('detectInk', () => {
       assert.equal(result.dependencyType, 'direct');
     });
 
+    it('does NOT flag a re-export wrapper as bundled', () => {
+      // A wrapper that imports Ink's hooks and re-exports them under the same
+      // names matches the `const useInput = ...` definition shape, but the file
+      // resolves Ink externally, so it ships no Ink source and owes nothing.
+      const entries = [
+        pkgJson({}),
+        entry('index.js', [
+          'import { useInput as inkUseInput, useApp as inkUseApp } from \'ink\';',
+          'export const useInput = inkUseInput;',
+          'export const useApp = inkUseApp;',
+        ].join('\n')),
+      ];
+      const result = detectInk(entries);
+      assert.equal(result.referencesInk, true);
+      assert.equal(result.bundlesInk, false);
+      assert.deepEqual(result.definedInkIds, []);
+      assert.equal(result.dependencyType, 'direct');
+    });
+
     it('flags a package that inlines ink source with no dependency', () => {
       // Ink's implementation vendored/inlined: its hooks appear in the source.
       const entries = [
