@@ -139,17 +139,36 @@ async function checkPackage(packageName, flags) {
       };
     }
 
+    const inkDetection = {
+      confidence: detection.confidence,
+      dependencyType: detection.dependencyType,
+      evidence: detection.evidence,
+    };
+
+    // Declares ink as a dependency but does not bundle its source: npm resolves
+    // the dependency at install time, so this package's tarball ships no Ink
+    // code and carries no attribution obligation. Informational, never a FAIL.
+    if (!detection.bundlesInk) {
+      return {
+        package: packageName,
+        version: meta.version,
+        usesInk: true,
+        inkDetection,
+        attribution: { found: null, locations: [], missingCopyrightHolders: [] },
+        downloads,
+        status: 'na',
+        error: null,
+      };
+    }
+
+    // Ink source is bundled/vendored here — attribution is required.
     const attr = checkAttribution(entries);
 
     return {
       package: packageName,
       version: meta.version,
       usesInk: true,
-      inkDetection: {
-        confidence: detection.confidence,
-        dependencyType: detection.dependencyType,
-        evidence: detection.evidence,
-      },
+      inkDetection,
       attribution: {
         found: attr.hasAttribution,
         vadymDemedes: attr.vadymFound,
