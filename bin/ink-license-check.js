@@ -190,11 +190,34 @@ async function checkPackage(packageName, flags) {
   }
 }
 
+// Cap concurrent tarball fetches so a large package list does not open
+// hundreds of registry connections at once.
+const MAX_CONCURRENCY = 8;
+
+async function mapWithConcurrency(items, limit, fn) {
+  const results = Array.from({ length: items.length });
+  let next = 0;
+
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i], i);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, worker);
+  await Promise.all(workers);
+  return results;
+}
+
 async function main() {
   const { packages, flags } = parseArgs(process.argv);
 
-  const settled = await Promise.allSettled(
-    packages.map((p) => checkPackage(p, flags)),
+  const settled = await mapWithConcurrency(packages, MAX_CONCURRENCY, (p) =>
+    checkPackage(p, flags).then(
+      (value) => ({ status: 'fulfilled', value }),
+      (reason) => ({ status: 'rejected', reason }),
+    ),
   );
 
   let results = settled.map((s, i) =>
@@ -219,7 +242,7 @@ async function main() {
 
   const hasViolations = results.some((r) => r.status === 'fail');
   const hasErrors = results.some((r) => r.status === 'error');
-  process.exit(hasViolations ? 1 : hasErrors ? 2 : 0);
+  process.exit(hasViolations ? 1 : (hasErrors ? 2 : 0));
 }
 
 main().catch((err) => {
