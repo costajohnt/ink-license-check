@@ -53,6 +53,40 @@ function createTgz(entries) {
   return gzipSync(createTar(entries));
 }
 
+// Build a raw 512-byte header + padded data block with an explicit type flag.
+function createBlock(name, dataBuf, typeFlag = 0x30) {
+  const header = Buffer.alloc(512);
+  header.write(name, 0, Math.min(name.length, 100), 'utf8');
+  header.write('0000644\0', 100, 8, 'utf8');
+  header.write('0000000\0', 108, 8, 'utf8');
+  header.write('0000000\0', 116, 8, 'utf8');
+  header.write(dataBuf.length.toString(8).padStart(11, '0') + '\0', 124, 12, 'utf8');
+  header.write('00000000000\0', 136, 12, 'utf8');
+  header[156] = typeFlag;
+  header.write('ustar\0', 257, 6, 'utf8');
+  header.write('00', 263, 2, 'utf8');
+  header.fill(0x20, 148, 156);
+  let checksum = 0;
+  for (let i = 0; i < 512; i++) checksum += header[i];
+  header.write(checksum.toString(8).padStart(6, '0') + '\0 ', 148, 8, 'utf8');
+  const pad = dataBuf.length % 512 === 0 ? 0 : 512 - (dataBuf.length % 512);
+  return Buffer.concat([header, dataBuf, Buffer.alloc(pad)]);
+}
+
+// Encode a single PAX record "<len> key=value\n" where len is the total byte
+// length of the record (including its own digits).
+function paxRecord(key, value) {
+  const body = `${key}=${value}\n`;
+  let len = body.length;
+  for (;;) {
+    const candidate = String(len).length + 1 + body.length;
+    if (candidate === len) break;
+    len = candidate;
+  }
+
+  return `${len} ${body}`;
+}
+
 describe('extractTgz', () => {
   it('extracts a single file', () => {
     const tgz = createTgz([['package/hello.txt', 'Hello World']]);
@@ -133,5 +167,42 @@ describe('extractTgz', () => {
     const entries = extractTgz(tgz);
     assert.equal(entries.length, 1);
     assert.deepEqual(entries[0].data, binary);
+  });
+
+  it('resolves a long filename from a PAX (x) extended header', () => {
+    // A 170+ char path does not fit ustar's 100-char name field; without PAX
+    // support the name truncates and loses its .js extension, making the file
+    // invisible to the detection/attribution scans.
+    const longPath = `package/dist/${'a'.repeat(160)}.js`;
+    const content = 'export const x = 1;';
+    const paxData = Buffer.from(paxRecord('path', longPath), 'utf8');
+    const truncatedName = longPath.slice(0, 100);
+
+    const tar = Buffer.concat([
+      createBlock('PaxHeader/0', paxData, 0x78), // 'x'
+      createBlock(truncatedName, Buffer.from(content, 'utf8'), 0x30),
+      Buffer.alloc(1024),
+    ]);
+    const entries = extractTgz(gzipSync(tar));
+
+    assert.equal(entries.length, 1);
+    assert.equal(entries[0].name, longPath.replace(/^[^/]+\//, ''));
+    assert.ok(entries[0].name.endsWith('.js'), 'extension preserved');
+    assert.equal(entries[0].data.toString(), content);
+  });
+
+  it('applies a PAX global (g) path default', () => {
+    const longPath = `package/${'b'.repeat(150)}.mjs`;
+    const paxData = Buffer.from(paxRecord('path', longPath), 'utf8');
+
+    const tar = Buffer.concat([
+      createBlock('pax_global_header', paxData, 0x67), // 'g'
+      createBlock(longPath.slice(0, 100), Buffer.from('1;', 'utf8'), 0x30),
+      Buffer.alloc(1024),
+    ]);
+    const entries = extractTgz(gzipSync(tar));
+
+    assert.equal(entries.length, 1);
+    assert.ok(entries[0].name.endsWith('.mjs'));
   });
 });

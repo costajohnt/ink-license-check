@@ -1,6 +1,6 @@
 {
   "name": "ink-license-check",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Check npm packages for missing Ink (MIT) license attribution",
   "type": "module",
   "bin": {
@@ -10,7 +10,8 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "lint": "xo"
   },
   "keywords": [
     "ink",
@@ -31,6 +32,48 @@
     "bin/",
     "lib/",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
-  ]
+  ],
+  "devDependencies": {
+    "xo": "^0.60.0"
+  },
+  "xo": {
+    "space": true,
+    "ignores": [
+      "scripts/research/**"
+    ],
+    "rules": {
+      "object-curly-spacing": ["error", "always"],
+      "object-curly-newline": "off",
+      "array-element-newline": "off",
+      "padding-line-between-statements": "off",
+      "capitalized-comments": "off",
+      "no-await-in-loop": "off",
+      "no-eq-null": "off",
+      "eqeqeq": ["error", "always", { "null": "ignore" }],
+      "arrow-parens": "off",
+      "curly": ["error", "multi-line"],
+      "promise/prefer-await-to-then": "off",
+      "unicorn/prevent-abbreviations": "off",
+      "unicorn/import-style": "off",
+      "unicorn/switch-case-braces": "off",
+      "unicorn/no-process-exit": "off",
+      "unicorn/no-array-push-push": "off",
+      "unicorn/no-array-for-each": "off",
+      "unicorn/no-array-reduce": "off",
+      "unicorn/prefer-string-replace-all": "off",
+      "unicorn/no-negated-condition": "off",
+      "unicorn/no-hex-escape": "off",
+      "unicorn/escape-case": "off",
+      "unicorn/better-regex": "off",
+      "unicorn/number-literal-case": "off",
+      "unicorn/numeric-separators-style": "off",
+      "unicorn/catch-error-name": "off",
+      "unicorn/prefer-top-level-await": "off",
+      "unicorn/prefer-type-error": "off",
+      "n/prefer-global/process": "off",
+      "n/no-unsupported-features/node-builtins": "off"
+    }
+  }
 }

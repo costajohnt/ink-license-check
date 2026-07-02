@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { getPackageMetadata, downloadTarball, getDownloadCount, PackageNotFoundError } from '../lib/registry.js';
 import { extractTgz } from '../lib/tar.js';
 import { detectInk } from '../lib/detect.js';
-import { checkAttribution } from '../lib/attribution.js';
+import { classify, errorResult, exitCode, mapWithConcurrency } from '../lib/check.js';
 import { formatText, formatJson, formatReport } from '../lib/format.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -96,18 +96,9 @@ function parseArgs(argv) {
   return { packages, flags };
 }
 
-function errorResult(packageName, status, message) {
-  return {
-    package: packageName,
-    version: null,
-    usesInk: false,
-    inkDetection: null,
-    attribution: null,
-    downloads: null,
-    status,
-    error: message,
-  };
-}
+// Cap concurrent tarball fetches so a large package list does not open
+// hundreds of registry connections at once.
+const MAX_CONCURRENCY = 8;
 
 async function checkPackage(packageName, flags) {
   try {
@@ -116,6 +107,11 @@ async function checkPackage(packageName, flags) {
     const entries = extractTgz(tarballBuffer);
 
     const detection = detectInk(entries);
+
+    // Surface files that were skipped as non-text so a dropped file is visible.
+    if (detection.skippedFiles > 0) {
+      console.error(`Note: skipped ${detection.skippedFiles} non-text file(s) while scanning ${packageName}`);
+    }
 
     let downloads = null;
     if (flags.downloads) {
@@ -126,41 +122,7 @@ async function checkPackage(packageName, flags) {
       }
     }
 
-    if (!detection.usesInk) {
-      return {
-        package: packageName,
-        version: meta.version,
-        usesInk: false,
-        inkDetection: detection,
-        attribution: { found: false, locations: [], missingCopyrightHolders: [] },
-        downloads,
-        status: 'pass',
-        error: null,
-      };
-    }
-
-    const attr = checkAttribution(entries);
-
-    return {
-      package: packageName,
-      version: meta.version,
-      usesInk: true,
-      inkDetection: {
-        confidence: detection.confidence,
-        dependencyType: detection.dependencyType,
-        evidence: detection.evidence,
-      },
-      attribution: {
-        found: attr.hasAttribution,
-        vadymDemedes: attr.vadymFound,
-        sindreSorhus: attr.sindreFound,
-        locations: attr.foundIn,
-        missingCopyrightHolders: attr.missingCopyrightHolders,
-      },
-      downloads,
-      status: attr.hasAttribution ? 'pass' : 'fail',
-      error: null,
-    };
+    return classify({ packageName, version: meta.version, detection, entries, downloads });
   } catch (err) {
     if (err instanceof PackageNotFoundError) {
       return errorResult(packageName, 'skip', 'Package not found on npm');
@@ -174,8 +136,11 @@ async function checkPackage(packageName, flags) {
 async function main() {
   const { packages, flags } = parseArgs(process.argv);
 
-  const settled = await Promise.allSettled(
-    packages.map((p) => checkPackage(p, flags)),
+  const settled = await mapWithConcurrency(packages, MAX_CONCURRENCY, (p) =>
+    checkPackage(p, flags).then(
+      (value) => ({ status: 'fulfilled', value }),
+      (reason) => ({ status: 'rejected', reason }),
+    ),
   );
 
   let results = settled.map((s, i) =>
@@ -198,9 +163,7 @@ async function main() {
     console.log(formatText(results, opts));
   }
 
-  const hasViolations = results.some((r) => r.status === 'fail');
-  const hasErrors = results.some((r) => r.status === 'error');
-  process.exit(hasViolations ? 1 : hasErrors ? 2 : 0);
+  process.exit(exitCode(results));
 }
 
 main().catch((err) => {

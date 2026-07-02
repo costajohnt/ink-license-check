@@ -6,14 +6,20 @@ function entry(name, content) {
   return { name, data: Buffer.from(content, 'utf8') };
 }
 
+// Ink's LICENSE names BOTH holders, so a compliant attribution credits both.
+const BOTH = 'Copyright (c) Vadym Demedes\nCopyright (c) Sindre Sorhus';
+
 describe('checkAttribution', () => {
   describe('license file scanning', () => {
-    it('finds Vadym Demedes in LICENSE file', () => {
+    it('passes on Vadym alone (the only holder named in Ink <= 6)', () => {
       const result = checkAttribution([
         entry('LICENSE', 'MIT License\n\nCopyright (c) Vadym Demedes'),
       ]);
-      assert.equal(result.hasAttribution, true);
       assert.equal(result.vadymFound, true);
+      assert.equal(result.sindreFound, false);
+      assert.equal(result.hasAttribution, true);
+      assert.deepEqual(result.missingCopyrightHolders, []);
+      assert.ok(result.notes.some((n) => n.includes('Sindre')));
       assert.ok(result.foundIn.includes('LICENSE'));
     });
 
@@ -21,7 +27,6 @@ describe('checkAttribution', () => {
       const result = checkAttribution([
         entry('LICENSE', 'Copyright (c) Vadim Demedes'),
       ]);
-      assert.equal(result.hasAttribution, true);
       assert.equal(result.vadymFound, true);
     });
 
@@ -29,59 +34,61 @@ describe('checkAttribution', () => {
       const result = checkAttribution([
         entry('LICENSE.md', 'Copyright (c) vadimdemedes@hey.com'),
       ]);
-      assert.equal(result.hasAttribution, true);
+      assert.equal(result.vadymFound, true);
     });
 
-    it('finds both copyright holders', () => {
+    it('passes with both holders present and adds no Sindre note', () => {
       const result = checkAttribution([
-        entry('LICENSE', 'Copyright (c) Vadym Demedes\nCopyright (c) Sindre Sorhus'),
+        entry('LICENSE', BOTH),
       ]);
       assert.equal(result.vadymFound, true);
       assert.equal(result.sindreFound, true);
+      assert.equal(result.hasAttribution, true);
       assert.deepEqual(result.missingCopyrightHolders, []);
+      assert.deepEqual(result.notes, []);
     });
 
-    it('reports missing Sindre Sorhus when only Vadym found', () => {
+    it('does NOT fail a package that names only Vadym (e.g. vendored ink@4)', () => {
       const result = checkAttribution([
         entry('LICENSE', 'Copyright (c) Vadym Demedes'),
       ]);
       assert.equal(result.hasAttribution, true);
-      assert.deepEqual(result.missingCopyrightHolders, ['Sindre Sorhus']);
+      assert.deepEqual(result.missingCopyrightHolders, []);
     });
 
-    it('reports missing Vadym when only Sindre found', () => {
+    it('fails when the always-present holder Vadym is missing', () => {
       const result = checkAttribution([
         entry('LICENSE', 'Copyright (c) Sindre Sorhus'),
       ]);
       assert.equal(result.hasAttribution, false);
       assert.equal(result.sindreFound, true);
-      assert.ok(result.missingCopyrightHolders.includes('Vadym Demedes'));
+      assert.deepEqual(result.missingCopyrightHolders, ['Vadym Demedes']);
     });
 
     it('checks NOTICE files', () => {
       const result = checkAttribution([
-        entry('NOTICE', 'This product includes software by Vadym Demedes'),
+        entry('NOTICE', 'This product includes software by Vadym Demedes and Sindre Sorhus'),
       ]);
       assert.equal(result.hasAttribution, true);
     });
 
     it('checks THIRD_PARTY files', () => {
       const result = checkAttribution([
-        entry('THIRD_PARTY_NOTICES.txt', 'ink - MIT - Vadym Demedes'),
+        entry('THIRD_PARTY_NOTICES.txt', 'ink - MIT - Vadym Demedes, Sindre Sorhus'),
       ]);
       assert.equal(result.hasAttribution, true);
     });
 
     it('checks licence (British spelling)', () => {
       const result = checkAttribution([
-        entry('LICENCE', 'Vadym Demedes'),
+        entry('LICENCE', 'Vadym Demedes\nSindre Sorhus'),
       ]);
       assert.equal(result.hasAttribution, true);
     });
 
     it('is case-insensitive for content matching', () => {
       const result = checkAttribution([
-        entry('LICENSE', 'copyright (c) VADYM DEMEDES'),
+        entry('LICENSE', 'copyright (c) VADYM DEMEDES and SINDRE SORHUS'),
       ]);
       assert.equal(result.hasAttribution, true);
     });
@@ -91,6 +98,7 @@ describe('checkAttribution', () => {
         entry('LICENSE', 'MIT License\n\nCopyright (c) Some Company'),
       ]);
       assert.equal(result.hasAttribution, false);
+      assert.deepEqual(result.missingCopyrightHolders, ['Vadym Demedes']);
     });
 
     it('fails when no license files exist', () => {
@@ -102,41 +110,45 @@ describe('checkAttribution', () => {
     });
   });
 
-  describe('JS license header scanning', () => {
-    it('finds attribution in block comment header', () => {
+  describe('JS full-file scanning', () => {
+    it('finds attribution in a block comment header', () => {
       const result = checkAttribution([
-        entry('dist/index.js', `/*!\n * ink v5.0.0\n * Copyright (c) Vadym Demedes\n * MIT License\n */\nconst x = 1;`),
+        entry('dist/index.js', '/*!\n * ink v5.0.0\n * Copyright (c) Vadym Demedes and Sindre Sorhus\n * MIT License\n */\nconst x = 1;'),
       ]);
       assert.equal(result.hasAttribution, true);
-      assert.ok(result.foundIn.some((f) => f.includes('license header')));
+      assert.ok(result.foundIn.some((f) => f.includes('dist/index.js')));
     });
 
-    it('finds attribution in @license comment', () => {
-      const result = checkAttribution([
-        entry('dist/bundle.js', `/**\n * @license MIT\n * Copyright Vadym Demedes\n */\n"use strict";`),
-      ]);
+    it('finds end-of-file legal comments (esbuild --legal-comments=eof)', () => {
+      // The false positive that motivated the fix: attribution lives at the END
+      // of a bundle, not the top header.
+      const bundle = [
+        '"use strict";',
+        'var x = 1;'.repeat(500),
+        'console.log(x);',
+        '/*! Bundled licenses:',
+        ' * ink: MIT License, Copyright (c) Vadym Demedes and Sindre Sorhus',
+        ' */',
+      ].join('\n');
+      const result = checkAttribution([entry('dist/chunk-ABC123.js', bundle)]);
       assert.equal(result.hasAttribution, true);
+      assert.ok(result.foundIn.some((f) => f.includes('dist/chunk-ABC123.js')));
     });
 
-    it('finds attribution in single-line comment header', () => {
+    it('scans beyond the header for names appearing after code', () => {
+      // Header-only scanning missed this; full-file scanning finds it.
       const result = checkAttribution([
-        entry('dist/cli.js', `#!/usr/bin/env node\n// Copyright (c) Vadym Demedes - MIT\nconst x = 1;`),
+        entry('dist/index.js', 'const x = 1;\n// Vadym Demedes\n// Sindre Sorhus\nconst y = 2;'),
       ]);
+      assert.equal(result.vadymFound, true);
+      assert.equal(result.sindreFound, true);
       assert.equal(result.hasAttribution, true);
-    });
-
-    it('does not scan beyond comment headers', () => {
-      const result = checkAttribution([
-        entry('dist/index.js', `const x = 1;\n// Vadym Demedes\nconst y = 2;`),
-      ]);
-      // Vadym appears after code, not in a header
-      assert.equal(result.hasAttribution, false);
     });
 
     it('skips binary files', () => {
       const buf = Buffer.alloc(100);
       buf[0] = 0x00; // null byte signals binary
-      buf.write('Vadym Demedes', 10);
+      buf.write('Vadym Demedes Sindre Sorhus', 10);
       const result = checkAttribution([
         { name: 'dist/index.js', data: buf },
       ]);
