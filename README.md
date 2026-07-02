@@ -8,15 +8,24 @@ See the [related discussion](https://github.com/vadimdemedes/ink/discussions/924
 
 ## Install
 
-```
-npm install -g ink-license-check
-```
+This package is not published to npm yet. Install it from GitHub.
 
-Or run directly with npx:
+Run directly without installing:
 
 ```
-npx ink-license-check <package...>
+npx github:costajohnt/ink-license-check <package...>
 ```
+
+Or clone and link it for a global `ink-license-check` command:
+
+```
+git clone https://github.com/costajohnt/ink-license-check.git
+cd ink-license-check
+npm link
+```
+
+It has zero runtime dependencies, so there is nothing to install for the tool
+itself. (`npm install` only pulls the dev-time linter.)
 
 ## Usage
 
@@ -35,15 +44,15 @@ Options:
 
 ## Examples
 
-Check a single package:
+Check a single package that bundles Ink and attributes it correctly:
 
 ```
 $ ink-license-check some-cli-tool
 
-ink-license-check v1.0.0
+ink-license-check v1.1.0
 
   PASS  some-cli-tool@2.1.0
-        Uses ink (dependency), attribution found in LICENSE.md
+        Uses ink (bundled), attribution found in dist/cli.js
 
 No violations found in 1 package
 ```
@@ -53,18 +62,22 @@ Check multiple packages with download counts:
 ```
 $ ink-license-check pkg-a pkg-b -d
 
-ink-license-check v1.0.0
+ink-license-check v1.1.0
 
-  PASS  pkg-a@1.0.0  (12.4k monthly downloads)
-        Uses ink (dependency), attribution found in LICENSE
+  n/a   pkg-a@1.0.0  (12.4k monthly downloads)
+        Uses ink via dependency (not bundled) — attribution obligation falls on install, not this tarball
 
   FAIL  pkg-b@3.2.0  (1.2M monthly downloads)
         Uses ink (bundled), missing attribution
-        Evidence: require("ink") found in dist/cli.js
+        Evidence: 3 ink-specific identifiers found with React indicators
         Missing: Vadym Demedes, Sindre Sorhus
 
 1 violation found in 2 packages
 ```
+
+`n/a` means the package declares or imports Ink but does not ship Ink's source
+in its own tarball, so it has no attribution obligation. Only packages that
+bundle/vendor Ink's source can be a `FAIL`.
 
 Generate a markdown report for high-download packages:
 
@@ -82,17 +95,29 @@ $ ink-license-check some-package --json
 
 For each package:
 
-1. Downloads the npm tarball from the registry
-2. Detects Ink usage via two methods:
-   - **Dependency check**: looks for `ink`, `ink-*`, `@inkjs/*`, or `pastel` in package.json dependencies
-   - **Bundled code scan**: scans JS files for `require("ink")`, `from "ink"`, and Ink-specific hooks like `useInput`, `useApp`, etc.
-3. If Ink usage is detected, checks for proper attribution:
-   - Scans LICENSE, NOTICE, and THIRD_PARTY files for copyright holder names
-   - Scans JS file license comment headers for attribution
+1. Downloads the npm tarball from the registry.
+2. Classifies how it relates to Ink, from least to most significant:
+   - **Declares** `ink`, `ink-*`, `@inkjs/*`, or `pastel` in `dependencies`. npm
+     does not copy a dependency's source into this tarball, so this is
+     informational only. (`devDependencies` and `peerDependencies` are ignored
+     entirely, since neither is shipped.)
+   - **References** Ink via a live `require("ink")` / `from "ink"` in the shipped
+     JS. This is still an external module reference resolved at install time, so
+     it is also informational.
+   - **Bundles** Ink's source into the published files (vendored, or inlined by a
+     bundler such as esbuild/webpack), detected by Ink's API implementation
+     appearing inline (its hooks, with React). This is the only case where Ink's
+     source is actually present, so it is the only case that owes attribution.
+3. For a bundling package, checks for attribution by scanning the **entire**
+   contents of LICENSE/NOTICE/THIRD_PARTY files and JS files (not just headers,
+   so end-of-file bundler legal comments are found). Ink's LICENSE names both
+   Vadym Demedes and Sindre Sorhus, so a pass requires both.
+
+A declares/references-only package reports `n/a` (not bundled) and never fails.
 
 ## Exit Codes
 
-- `0` — no violations found
+- `0` — no violations found (includes `n/a` dependency-only packages)
 - `1` — one or more violations found
 - `2` — usage error or package check failures (network errors, etc.)
 
