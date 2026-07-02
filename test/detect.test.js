@@ -92,7 +92,7 @@ describe('detectInk', () => {
     it('handles from \'ink\' with single quotes', () => {
       const entries = [
         pkgJson({}),
-        entry('dist/index.js', "import { render } from 'ink';"),
+        entry('dist/index.js', 'import { render } from \'ink\';'),
       ];
       const result = detectInk(entries);
       assert.equal(result.usesInk, true);

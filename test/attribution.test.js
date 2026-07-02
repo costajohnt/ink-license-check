@@ -110,7 +110,7 @@ describe('checkAttribution', () => {
   describe('JS full-file scanning', () => {
     it('finds attribution in a block comment header', () => {
       const result = checkAttribution([
-        entry('dist/index.js', `/*!\n * ink v5.0.0\n * Copyright (c) Vadym Demedes and Sindre Sorhus\n * MIT License\n */\nconst x = 1;`),
+        entry('dist/index.js', '/*!\n * ink v5.0.0\n * Copyright (c) Vadym Demedes and Sindre Sorhus\n * MIT License\n */\nconst x = 1;'),
       ]);
       assert.equal(result.hasAttribution, true);
       assert.ok(result.foundIn.some((f) => f.includes('dist/index.js')));
@@ -135,7 +135,7 @@ describe('checkAttribution', () => {
     it('scans beyond the header for names appearing after code', () => {
       // Header-only scanning missed this; full-file scanning finds it.
       const result = checkAttribution([
-        entry('dist/index.js', `const x = 1;\n// Vadym Demedes\n// Sindre Sorhus\nconst y = 2;`),
+        entry('dist/index.js', 'const x = 1;\n// Vadym Demedes\n// Sindre Sorhus\nconst y = 2;'),
       ]);
       assert.equal(result.vadymFound, true);
       assert.equal(result.sindreFound, true);
