@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { getPackageMetadata, downloadTarball, getDownloadCount, PackageNotFoundError } from '../lib/registry.js';
 import { extractTgz } from '../lib/tar.js';
 import { detectInk } from '../lib/detect.js';
-import { checkAttribution } from '../lib/attribution.js';
+import { classify, errorResult, exitCode, mapWithConcurrency } from '../lib/check.js';
 import { formatText, formatJson, formatReport } from '../lib/format.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -96,18 +96,9 @@ function parseArgs(argv) {
   return { packages, flags };
 }
 
-function errorResult(packageName, status, message) {
-  return {
-    package: packageName,
-    version: null,
-    usesInk: false,
-    inkDetection: null,
-    attribution: null,
-    downloads: null,
-    status,
-    error: message,
-  };
-}
+// Cap concurrent tarball fetches so a large package list does not open
+// hundreds of registry connections at once.
+const MAX_CONCURRENCY = 8;
 
 async function checkPackage(packageName, flags) {
   try {
@@ -116,6 +107,11 @@ async function checkPackage(packageName, flags) {
     const entries = extractTgz(tarballBuffer);
 
     const detection = detectInk(entries);
+
+    // Surface files that were skipped as non-text so a dropped file is visible.
+    if (detection.skippedFiles > 0) {
+      console.error(`Note: skipped ${detection.skippedFiles} non-text file(s) while scanning ${packageName}`);
+    }
 
     let downloads = null;
     if (flags.downloads) {
@@ -126,60 +122,7 @@ async function checkPackage(packageName, flags) {
       }
     }
 
-    if (!detection.usesInk) {
-      return {
-        package: packageName,
-        version: meta.version,
-        usesInk: false,
-        inkDetection: detection,
-        attribution: { found: false, locations: [], missingCopyrightHolders: [] },
-        downloads,
-        status: 'pass',
-        error: null,
-      };
-    }
-
-    const inkDetection = {
-      confidence: detection.confidence,
-      dependencyType: detection.dependencyType,
-      evidence: detection.evidence,
-    };
-
-    // Declares ink as a dependency but does not bundle its source: npm resolves
-    // the dependency at install time, so this package's tarball ships no Ink
-    // code and carries no attribution obligation. Informational, never a FAIL.
-    if (!detection.bundlesInk) {
-      return {
-        package: packageName,
-        version: meta.version,
-        usesInk: true,
-        inkDetection,
-        attribution: { found: null, locations: [], missingCopyrightHolders: [] },
-        downloads,
-        status: 'na',
-        error: null,
-      };
-    }
-
-    // Ink source is bundled/vendored here — attribution is required.
-    const attr = checkAttribution(entries);
-
-    return {
-      package: packageName,
-      version: meta.version,
-      usesInk: true,
-      inkDetection,
-      attribution: {
-        found: attr.hasAttribution,
-        vadymDemedes: attr.vadymFound,
-        sindreSorhus: attr.sindreFound,
-        locations: attr.foundIn,
-        missingCopyrightHolders: attr.missingCopyrightHolders,
-      },
-      downloads,
-      status: attr.hasAttribution ? 'pass' : 'fail',
-      error: null,
-    };
+    return classify({ packageName, version: meta.version, detection, entries, downloads });
   } catch (err) {
     if (err instanceof PackageNotFoundError) {
       return errorResult(packageName, 'skip', 'Package not found on npm');
@@ -188,26 +131,6 @@ async function checkPackage(packageName, flags) {
     console.error(`Warning: failed to check ${packageName}: ${err.message}`);
     return errorResult(packageName, 'error', err.message);
   }
-}
-
-// Cap concurrent tarball fetches so a large package list does not open
-// hundreds of registry connections at once.
-const MAX_CONCURRENCY = 8;
-
-async function mapWithConcurrency(items, limit, fn) {
-  const results = Array.from({ length: items.length });
-  let next = 0;
-
-  async function worker() {
-    while (next < items.length) {
-      const i = next++;
-      results[i] = await fn(items[i], i);
-    }
-  }
-
-  const workers = Array.from({ length: Math.min(limit, items.length) }, worker);
-  await Promise.all(workers);
-  return results;
 }
 
 async function main() {
@@ -240,9 +163,7 @@ async function main() {
     console.log(formatText(results, opts));
   }
 
-  const hasViolations = results.some((r) => r.status === 'fail');
-  const hasErrors = results.some((r) => r.status === 'error');
-  process.exit(hasViolations ? 1 : (hasErrors ? 2 : 0));
+  process.exit(exitCode(results));
 }
 
 main().catch((err) => {
