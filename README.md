@@ -69,8 +69,8 @@ ink-license-check v1.1.0
 
   FAIL  pkg-b@3.2.0  (1.2M monthly downloads)
         Uses ink (bundled), missing attribution
-        Evidence: 3 ink-specific identifiers found with React indicators
-        Missing: Vadym Demedes, Sindre Sorhus
+        Evidence: ink hooks defined in bundled source: useInput, useApp
+        Missing: Vadym Demedes
 
 1 violation found in 2 packages
 ```
@@ -105,13 +105,16 @@ For each package:
      JS. This is still an external module reference resolved at install time, so
      it is also informational.
    - **Bundles** Ink's source into the published files (vendored, or inlined by a
-     bundler such as esbuild/webpack), detected by Ink's API implementation
-     appearing inline (its hooks, with React). This is the only case where Ink's
-     source is actually present, so it is the only case that owes attribution.
+     bundler such as esbuild/webpack), detected by finding Ink's hooks in
+     **definition** form (e.g. `function useInput(`). A consumer only imports and
+     calls the hooks, never defines them, so this distinguishes a real bundle
+     from ordinary usage. This is the only case that owes attribution.
 3. For a bundling package, checks for attribution by scanning the **entire**
    contents of LICENSE/NOTICE/THIRD_PARTY files and JS files (not just headers,
-   so end-of-file bundler legal comments are found). Ink's LICENSE names both
-   Vadym Demedes and Sindre Sorhus, so a pass requires both.
+   so end-of-file bundler legal comments are found). A pass requires Vadym
+   (Vadim) Demedes, who is named in every version of Ink's LICENSE; Sindre Sorhus
+   (added in Ink 7.x) is reported as an informational note when absent, never as
+   a violation, so a package vendoring an older Ink is not falsely accused.
 
 A declares/references-only package reports `n/a` (not bundled) and never fails.
 
