@@ -99,16 +99,13 @@ describe('detectInk', () => {
       assert.equal(result.bundlesInk, false);
     });
 
-    it('detects inlined ink implementation (hooks + React) as bundled', () => {
+    it('detects inlined ink implementation (hook definitions) as bundled', () => {
       const entries = [
         pkgJson({}),
         entry('dist/app.js', `
           const React = require("react");
-          function App() {
-            useInput((input) => {});
-            const { exit } = useApp();
-            return createElement("div");
-          }
+          function useInput(handler) { /* ink impl */ }
+          const useApp = () => ({ exit() {} });
         `),
       ];
       const result = detectInk(entries);
@@ -116,16 +113,52 @@ describe('detectInk', () => {
       assert.equal(result.bundlesInk, true);
       assert.equal(result.confidence, 'bundled');
       assert.equal(result.dependencyType, 'bundled');
+      assert.deepEqual(result.definedInkIds.sort(), ['useApp', 'useInput']);
     });
 
-    it('does not flag ink hooks without React indicators', () => {
+    it('does NOT flag an ordinary consumer that imports and calls multiple hooks', () => {
+      // The shape of every real Ink CLI: imports hooks and calls them. It ships
+      // no Ink source, so it must be n/a, never a FAIL. (Reviewer-reproduced
+      // false positive.)
+      const entries = [
+        pkgJson({}),
+        entry('dist/cli.js', `
+          import React from "react";
+          import { useInput, useApp } from "ink";
+          function App() {
+            useInput((input) => {});
+            const { exit } = useApp();
+            return React.createElement("div");
+          }
+        `),
+      ];
+      const result = detectInk(entries);
+      assert.equal(result.referencesInk, true);
+      assert.equal(result.bundlesInk, false);
+      assert.deepEqual(result.definedInkIds, []);
+      assert.equal(result.dependencyType, 'direct');
+    });
+
+    it('does not treat a single hook definition as bundling', () => {
       const entries = [
         pkgJson({}),
         entry('dist/utils.js', 'function useInput(handler) { /* custom hook */ }'),
       ];
       const result = detectInk(entries);
-      // Only 1 identifier and no React — not enough
+      // Only 1 defined identifier — below the bundling threshold.
+      assert.equal(result.bundlesInk, false);
       assert.equal(result.usesInk, false);
+    });
+
+    it('does not let one hook used across two files reach the threshold', () => {
+      const entries = [
+        pkgJson({}),
+        entry('dist/a.js', 'import { useInput } from "ink"; useInput(() => {});'),
+        entry('dist/b.js', 'import { useInput } from "ink"; useInput(() => {});'),
+      ];
+      const result = detectInk(entries);
+      assert.equal(result.bundlesInk, false);
+      assert.deepEqual(result.definedInkIds, []);
     });
 
     it('skips files in node_modules', () => {
