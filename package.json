@@ -1,6 +1,6 @@
 {
   "name": "ink-license-check",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Check npm packages for missing Ink (MIT) license attribution",
   "type": "module",
   "bin": {
@@ -44,16 +44,28 @@
       "scripts/research/**"
     ],
     "rules": {
-      "object-curly-spacing": ["error", "always"],
+      "object-curly-spacing": [
+        "error",
+        "always"
+      ],
       "object-curly-newline": "off",
       "array-element-newline": "off",
       "padding-line-between-statements": "off",
       "capitalized-comments": "off",
       "no-await-in-loop": "off",
       "no-eq-null": "off",
-      "eqeqeq": ["error", "always", { "null": "ignore" }],
+      "eqeqeq": [
+        "error",
+        "always",
+        {
+          "null": "ignore"
+        }
+      ],
       "arrow-parens": "off",
-      "curly": ["error", "multi-line"],
+      "curly": [
+        "error",
+        "multi-line"
+      ],
       "promise/prefer-await-to-then": "off",
       "unicorn/prevent-abbreviations": "off",
       "unicorn/import-style": "off",

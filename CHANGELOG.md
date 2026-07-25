@@ -3,6 +3,13 @@
 All notable changes to this project are documented here. The format is loosely
 based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.1](https://github.com/costajohnt/ink-license-check/compare/v1.1.0...v1.1.1) (2026-07-25)
+
+
+### Bug Fixes
+
+* definition-scan module-map bundles, document minification gap, add release pipeline ([af9e97b](https://github.com/costajohnt/ink-license-check/commit/af9e97b441a25f5bc17a9a34bd78d3f3f969eaf5))
+
 ## 1.1.0
 
 Corrects the core "violation" definition, which produced false positives that
