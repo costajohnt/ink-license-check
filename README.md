@@ -118,6 +118,16 @@ For each package:
 
 A declares/references-only package reports `n/a` (not bundled) and never fails.
 
+## Known limitations
+
+- **Minified bundles**: definition detection relies on literal Ink identifier
+  names (hook and component definitions), which minifiers rename. A minified
+  bundle that vendors Ink's source will not be flagged. Auditing the
+  unminified build (or the package's published source) is the reliable path.
+- **Module-map evidence is weak**: a `"ink":` key in a bundler module map
+  counts as import evidence, but such files are still definition-scanned
+  since webpack inlines vendored source into the same file.
+
 ## Exit Codes
 
 - `0` — no violations found (includes `n/a` dependency-only packages)

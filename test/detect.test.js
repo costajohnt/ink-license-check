@@ -139,6 +139,35 @@ describe('detectInk', () => {
       assert.equal(result.dependencyType, 'direct');
     });
 
+    it('definition-scans webpack bundles whose only import evidence is a module-map key', () => {
+      // Regression for the module-map false negative: webpack inlines vendored
+      // Ink source into the same file that carries the '"ink":' module-map key,
+      // so that key must not exempt the file from definition scanning.
+      const entries = [
+        pkgJson({}),
+        entry('dist/bundle.js', `
+          var modules = { "ink": function(m, e, r) { /* inlined */ } };
+          function useInput(handler) { /* ink impl */ }
+          const useApp = () => ({ exit() {} });
+        `),
+      ];
+      const result = detectInk(entries);
+      assert.equal(result.bundlesInk, true);
+      assert.deepEqual(result.definedInkIds.sort(), ['useApp', 'useInput']);
+    });
+
+    it('still treats a live external import as a reference, not a bundle', () => {
+      const entries = [
+        pkgJson({ ink: '^5.0.0' }),
+        entry('dist/app.js', `
+          import { useInput, useApp } from "ink";
+          function useInput2() {}
+        `),
+      ];
+      const result = detectInk(entries);
+      assert.equal(result.bundlesInk, false);
+    });
+
     it('does not treat a single hook definition as bundling', () => {
       const entries = [
         pkgJson({}),
