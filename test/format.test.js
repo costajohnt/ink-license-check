@@ -38,6 +38,23 @@ describe('formatText', () => {
     assert.match(out, /1 violation found/);
   });
 
+  it('does not claim a clean run when a package could not be checked', () => {
+    const notFound = {
+      package: 'misspelled-pkg', version: null, usesInk: false, inkDetection: null,
+      attribution: null, downloads: null, status: 'error', error: 'Package not found on npm',
+    };
+    const out = formatText([notFound], { version: '1.1.0' });
+    assert.match(out, /ERR!/);
+    assert.match(out, /No violations found in 0 checked packages; 1 package could not be checked/);
+    assert.doesNotMatch(out, /No violations found in 1 package\b/);
+
+    const mixed = formatText([passBundled, notFound], { version: '1.1.0' });
+    assert.match(mixed, /No violations found in 1 checked package; 1 package could not be checked/);
+
+    const withFail = formatText([failBundled, notFound], { version: '1.1.0' });
+    assert.match(withFail, /1 violation found in 2 packages; 1 package could not be checked/);
+  });
+
   it('renders PASS for an attributed bundle', () => {
     const out = formatText([passBundled], { version: '1.1.0' });
     assert.match(out, /PASS/);

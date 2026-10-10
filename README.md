@@ -30,7 +30,10 @@ itself. (`npm install` only pulls the dev-time linter.)
 ## Usage
 
 ```
-ink-license-check <package...> [options]
+ink-license-check <package[@version|@tag]...> [options]
+
+Without a version the latest release is checked. A version must be exact
+(ink@4.0.0) or a dist-tag (ink@next); ranges are not supported.
 
 Options:
   --json                 Output results as JSON
@@ -132,7 +135,7 @@ A declares/references-only package reports `n/a` (not bundled) and never fails.
 
 - `0` — no violations found (includes `n/a` dependency-only packages)
 - `1` — one or more violations found
-- `2` — usage error or package check failures (network errors, etc.), including a download count that could not be fetched while `--min-downloads` is set (the package is kept in the results rather than dropped)
+- `2` — usage error or package check failures (a package, version or tag not found on npm, network errors, etc.), including a download count that could not be fetched while `--min-downloads` is set (the package is kept in the results rather than dropped)
 
 ## License
 
