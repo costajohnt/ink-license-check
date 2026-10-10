@@ -3,6 +3,13 @@
 All notable changes to this project are documented here. The format is loosely
 based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.3](https://github.com/costajohnt/ink-license-check/compare/v1.1.2...v1.1.3) (2026-10-10)
+
+
+### Bug Fixes
+
+* **deps:** patch dev dependency advisories ([#11](https://github.com/costajohnt/ink-license-check/issues/11)) ([44fc74a](https://github.com/costajohnt/ink-license-check/commit/44fc74aea08d6866d15be3ede97f10681af197fd))
+
 ## [1.1.2](https://github.com/costajohnt/ink-license-check/compare/v1.1.1...v1.1.2) (2026-10-10)
 
 
