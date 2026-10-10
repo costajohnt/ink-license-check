@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { detectInk } from '../lib/detect.js';
-import { classify, errorResult, exitCode, mapWithConcurrency } from '../lib/check.js';
+import { applyDownloadThreshold, classify, errorResult, exitCode, mapWithConcurrency } from '../lib/check.js';
 
 function entry(name, content) {
   return { name, data: Buffer.from(content, 'utf8') };
@@ -74,6 +74,47 @@ describe('exitCode', () => {
 
   it('prioritizes a violation over an error (exit 1)', () => {
     assert.equal(exitCode([{ status: 'error' }, { status: 'fail' }]), 1);
+  });
+
+  it('returns 2 when a download lookup failed under a threshold', () => {
+    const results = [{ status: 'pass', downloads: null, downloadsError: 'ENOTFOUND' }];
+    assert.equal(exitCode(results, { minDownloads: 1000 }), 2);
+  });
+
+  it('ignores a failed download lookup when no threshold is set', () => {
+    const results = [{ status: 'pass', downloads: null, downloadsError: 'ENOTFOUND' }];
+    assert.equal(exitCode(results), 0);
+  });
+});
+
+describe('applyDownloadThreshold', () => {
+  it('returns results unchanged when no threshold is set', () => {
+    const results = [{ status: 'pass', downloads: 1 }];
+    assert.equal(applyDownloadThreshold(results, null), results);
+  });
+
+  it('keeps packages at or above the threshold and drops those below', () => {
+    const out = applyDownloadThreshold([
+      { package: 'big', status: 'fail', downloads: 5000 },
+      { package: 'small', status: 'fail', downloads: 10 },
+      { package: 'none', status: 'fail', downloads: null },
+    ], 1000);
+    assert.deepEqual(out.map((r) => r.package), ['big']);
+  });
+
+  it('keeps a package whose download lookup failed instead of dropping it', () => {
+    const out = applyDownloadThreshold([
+      { package: 'unknown', status: 'fail', downloads: null, downloadsError: 'ENOTFOUND' },
+    ], 1000);
+    assert.deepEqual(out.map((r) => r.package), ['unknown']);
+  });
+
+  it('always keeps errors and skips', () => {
+    const out = applyDownloadThreshold([
+      { package: 'e', status: 'error', downloads: null },
+      { package: 's', status: 'skip', downloads: null },
+    ], 1000);
+    assert.deepEqual(out.map((r) => r.package), ['e', 's']);
   });
 });
 

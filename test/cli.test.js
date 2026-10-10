@@ -6,10 +6,15 @@ import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI = join(__dirname, '..', 'bin', 'ink-license-check.js');
+const MOCK_DOWNLOADS = join(__dirname, 'fixtures', 'mock-downloads-api.js');
 
-function run(args, { timeout = 30_000 } = {}) {
+// `mockDownloads` stubs api.npmjs.org (a count, or 'fail') so download-count
+// tests do not depend on that live service. The registry is still queried.
+function run(args, { timeout = 30_000, mockDownloads } = {}) {
+  const nodeArgs = mockDownloads == null ? [CLI, ...args] : ['--import', MOCK_DOWNLOADS, CLI, ...args];
+  const env = mockDownloads == null ? process.env : { ...process.env, MOCK_DOWNLOADS: String(mockDownloads) };
   return new Promise((resolve) => {
-    execFile('node', [CLI, ...args], { timeout }, (err, stdout, stderr) => {
+    execFile('node', nodeArgs, { timeout, env }, (err, stdout, stderr) => {
       resolve({
         exitCode: err ? (err.killed ? 'KILLED' : (err.code ?? 1)) : 0,
         stdout,
@@ -62,10 +67,9 @@ describe('CLI', () => {
   });
 
   it('includes download counts with -d flag', async () => {
-    const { stdout } = await run(['ink', '--json', '-d'], { timeout: 60_000 });
+    const { stdout } = await run(['ink', '--json', '-d'], { timeout: 60_000, mockDownloads: 5000 });
     const parsed = JSON.parse(stdout);
-    assert.ok(typeof parsed.results[0].downloads === 'number');
-    assert.ok(parsed.results[0].downloads > 0);
+    assert.equal(parsed.results[0].downloads, 5000);
   });
 
   it('handles non-existent packages gracefully', async () => {
@@ -83,7 +87,7 @@ describe('CLI', () => {
 
   it('filters by --min-downloads', async () => {
     // ink has millions of downloads, so a very high threshold should still include it
-    const { stdout } = await run(['ink', '--json', '--min-downloads', '1000'], { timeout: 60_000 });
+    const { stdout } = await run(['ink', '--json', '--min-downloads', '1000'], { timeout: 60_000, mockDownloads: 5000 });
     const parsed = JSON.parse(stdout);
     assert.equal(parsed.results.length, 1);
     assert.equal(parsed.results[0].package, 'ink');
@@ -92,13 +96,13 @@ describe('CLI', () => {
 
   it('--min-downloads filters out low-download packages', async () => {
     // Use a threshold higher than ink's downloads — should return empty results
-    const { stdout } = await run(['ink', '--json', '--min-downloads', '999999999999'], { timeout: 60_000 });
+    const { stdout } = await run(['ink', '--json', '--min-downloads', '999999999999'], { timeout: 60_000, mockDownloads: 5000 });
     const parsed = JSON.parse(stdout);
     assert.equal(parsed.results.length, 0);
   });
 
   it('generates markdown report with --report', async () => {
-    const { exitCode, stdout } = await run(['ink', '--report', '-d'], { timeout: 60_000 });
+    const { exitCode, stdout } = await run(['ink', '--report', '-d'], { timeout: 60_000, mockDownloads: 5000 });
     assert.equal(exitCode, 0);
     assert.ok(stdout.includes('# Ink License Attribution Report'));
     assert.ok(stdout.includes('## Summary'));
@@ -107,9 +111,20 @@ describe('CLI', () => {
   });
 
   it('--min-downloads=N syntax works', async () => {
-    const { stdout } = await run(['ink', '--json', '--min-downloads=1000'], { timeout: 60_000 });
+    const { stdout } = await run(['ink', '--json', '--min-downloads=1000'], { timeout: 60_000, mockDownloads: 5000 });
     const parsed = JSON.parse(stdout);
     assert.equal(parsed.results.length, 1);
+  });
+
+  it('--min-downloads keeps a package whose download lookup failed and exits 2', async () => {
+    const { exitCode, stdout, stderr } = await run(['ink', '--json', '--min-downloads', '1000'], { timeout: 60_000, mockDownloads: 'fail' });
+    const parsed = JSON.parse(stdout);
+    assert.equal(parsed.results.length, 1);
+    assert.equal(parsed.results[0].package, 'ink');
+    assert.equal(parsed.results[0].downloads, null);
+    assert.match(parsed.results[0].downloadsError, /ENOTFOUND/);
+    assert.equal(exitCode, 2);
+    assert.ok(stderr.includes('could not fetch downloads for ink'));
   });
 
   it('--min-downloads without value exits 2', async () => {

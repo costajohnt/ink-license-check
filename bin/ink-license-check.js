@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { getPackageMetadata, downloadTarball, getDownloadCount, PackageNotFoundError } from '../lib/registry.js';
 import { extractTgz } from '../lib/tar.js';
 import { detectInk } from '../lib/detect.js';
-import { classify, errorResult, exitCode, mapWithConcurrency } from '../lib/check.js';
+import { applyDownloadThreshold, classify, errorResult, exitCode, mapWithConcurrency } from '../lib/check.js';
 import { formatText, formatJson, formatReport } from '../lib/format.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -114,15 +114,20 @@ async function checkPackage(packageName, flags) {
     }
 
     let downloads = null;
+    let downloadsError = null;
     if (flags.downloads) {
       try {
         downloads = await getDownloadCount(packageName);
       } catch (dlErr) {
-        console.error(`Warning: could not fetch downloads for ${packageName}: ${dlErr.message}`);
+        downloadsError = dlErr.message;
+        const kept = flags.minDownloads != null ? ' (kept in results; --min-downloads could not be applied)' : '';
+        console.error(`Warning: could not fetch downloads for ${packageName}: ${dlErr.message}${kept}`);
       }
     }
 
-    return classify({ packageName, version: meta.version, detection, entries, downloads });
+    const result = classify({ packageName, version: meta.version, detection, entries, downloads });
+    if (downloadsError) result.downloadsError = downloadsError;
+    return result;
   } catch (err) {
     if (err instanceof PackageNotFoundError) {
       return errorResult(packageName, 'skip', 'Package not found on npm');
@@ -148,11 +153,7 @@ async function main() {
   );
 
   // Apply download threshold filter
-  if (flags.minDownloads != null) {
-    results = results.filter((r) =>
-      r.status === 'error' || r.status === 'skip' || (r.downloads != null && r.downloads >= flags.minDownloads),
-    );
-  }
+  results = applyDownloadThreshold(results, flags.minDownloads);
 
   const opts = { version: pkg.version, minDownloads: flags.minDownloads };
   if (flags.json) {
@@ -163,7 +164,7 @@ async function main() {
     console.log(formatText(results, opts));
   }
 
-  process.exit(exitCode(results));
+  process.exit(exitCode(results, { minDownloads: flags.minDownloads }));
 }
 
 main().catch((err) => {
