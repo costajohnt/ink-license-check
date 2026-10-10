@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getPackageMetadata, downloadTarball, getDownloadCount, PackageNotFoundError } from '../lib/registry.js';
+import { getPackageMetadata, downloadTarball, getDownloadCount, parsePackageSpec, PackageNotFoundError, VersionNotFoundError } from '../lib/registry.js';
 import { extractTgz } from '../lib/tar.js';
 import { detectInk } from '../lib/detect.js';
 import { applyDownloadThreshold, classify, errorResult, exitCode, mapWithConcurrency } from '../lib/check.js';
@@ -13,9 +13,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8'));
 
 const USAGE = `
-Usage: ink-license-check <package...> [options]
+Usage: ink-license-check <package[@version|@tag]...> [options]
 
 Check npm packages for missing Ink (MIT) license attribution.
+Without a version the latest release is checked. A version must be exact
+(ink@4.0.0) or a dist-tag (ink@next); ranges are not supported.
 
 Options:
   --json                 Output results as JSON
@@ -28,6 +30,7 @@ Options:
 
 Examples:
   ink-license-check my-cli-tool
+  ink-license-check my-cli-tool@2.3.1 @org/cli@next
   ink-license-check @org/cli another-pkg --json -d
   ink-license-check pkg-a pkg-b --report --min-downloads 100000
 `.trim();
@@ -100,9 +103,10 @@ function parseArgs(argv) {
 // hundreds of registry connections at once.
 const MAX_CONCURRENCY = 8;
 
-async function checkPackage(packageName, flags) {
+async function checkPackage(arg, flags) {
+  const { name: packageName, spec } = parsePackageSpec(arg);
   try {
-    const meta = await getPackageMetadata(packageName);
+    const meta = await getPackageMetadata(packageName, spec);
     const tarballBuffer = await downloadTarball(meta.dist.tarball);
     const entries = extractTgz(tarballBuffer);
 
@@ -129,12 +133,17 @@ async function checkPackage(packageName, flags) {
     if (downloadsError) result.downloadsError = downloadsError;
     return result;
   } catch (err) {
+    // A missing package or version is an error, not a skip: a misspelled
+    // name in CI must not read as a clean pass.
     if (err instanceof PackageNotFoundError) {
-      return errorResult(packageName, 'skip', 'Package not found on npm');
+      return errorResult(arg, 'error', 'Package not found on npm');
+    }
+    if (err instanceof VersionNotFoundError) {
+      return errorResult(arg, 'error', `Version or tag "${spec}" not found on npm (use an exact version or a dist-tag)`);
     }
 
-    console.error(`Warning: failed to check ${packageName}: ${err.message}`);
-    return errorResult(packageName, 'error', err.message);
+    console.error(`Warning: failed to check ${arg}: ${err.message}`);
+    return errorResult(arg, 'error', err.message);
   }
 }
 

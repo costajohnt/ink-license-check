@@ -72,10 +72,31 @@ describe('CLI', () => {
     assert.equal(parsed.results[0].downloads, 5000);
   });
 
-  it('handles non-existent packages gracefully', async () => {
+  it('reports a non-existent package as an error and exits 2', async () => {
     const { exitCode, stdout } = await run(['this-package-definitely-does-not-exist-xyz-123'], { timeout: 30_000 });
-    assert.equal(exitCode, 0); // skip doesn't count as violation
-    assert.ok(stdout.includes('SKIP'));
+    // A misspelled name in CI must not read as a pass.
+    assert.equal(exitCode, 2);
+    assert.ok(stdout.includes('ERR!'));
+    assert.ok(stdout.includes('Package not found on npm'));
+    assert.ok(!stdout.includes('No violations found in 1 package'));
+  });
+
+  it('checks a specific version given as name@version', async () => {
+    const { exitCode, stdout } = await run(['ink@4.0.0', '--json'], { timeout: 60_000 });
+    assert.equal(exitCode, 0);
+    const parsed = JSON.parse(stdout);
+    assert.equal(parsed.results[0].package, 'ink');
+    assert.equal(parsed.results[0].version, '4.0.0');
+    assert.equal(parsed.results[0].status, 'pass');
+  });
+
+  it('reports a version that does not exist as an error and exits 2', async () => {
+    const { exitCode, stdout } = await run(['ink@99.0.0', '--json'], { timeout: 30_000 });
+    assert.equal(exitCode, 2);
+    const parsed = JSON.parse(stdout);
+    assert.equal(parsed.results[0].package, 'ink@99.0.0');
+    assert.equal(parsed.results[0].status, 'error');
+    assert.match(parsed.results[0].error, /Version or tag "99\.0\.0" not found/);
   });
 
   it('checks multiple packages', async () => {
