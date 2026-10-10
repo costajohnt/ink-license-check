@@ -3,6 +3,14 @@
 All notable changes to this project are documented here. The format is loosely
 based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.2](https://github.com/costajohnt/ink-license-check/compare/v1.1.1...v1.1.2) (2026-10-10)
+
+
+### Bug Fixes
+
+* check name@version arguments and exit 2 for packages not found on npm ([#10](https://github.com/costajohnt/ink-license-check/issues/10)) ([7fb75ce](https://github.com/costajohnt/ink-license-check/commit/7fb75ce1b23129b49aae0b7eb0708b28107d85cc)), closes [#9](https://github.com/costajohnt/ink-license-check/issues/9)
+* keep packages with failed download lookups under --min-downloads and exit 2 ([#7](https://github.com/costajohnt/ink-license-check/issues/7)) ([b9a0a77](https://github.com/costajohnt/ink-license-check/commit/b9a0a77bb825b65d2fa1f918966c8fdfc9acd011)), closes [#6](https://github.com/costajohnt/ink-license-check/issues/6)
+
 ## [1.1.1](https://github.com/costajohnt/ink-license-check/compare/v1.1.0...v1.1.1) (2026-07-25)
 
 

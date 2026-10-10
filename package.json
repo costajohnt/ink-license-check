@@ -1,6 +1,6 @@
 {
   "name": "ink-license-check",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Check npm packages for missing Ink (MIT) license attribution",
   "type": "module",
   "bin": {
