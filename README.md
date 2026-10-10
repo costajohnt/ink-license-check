@@ -132,7 +132,7 @@ A declares/references-only package reports `n/a` (not bundled) and never fails.
 
 - `0` — no violations found (includes `n/a` dependency-only packages)
 - `1` — one or more violations found
-- `2` — usage error or package check failures (network errors, etc.)
+- `2` — usage error or package check failures (network errors, etc.), including a download count that could not be fetched while `--min-downloads` is set (the package is kept in the results rather than dropped)
 
 ## License
 
